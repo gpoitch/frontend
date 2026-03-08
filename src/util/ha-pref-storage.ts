@@ -8,6 +8,7 @@ const STORED_STATE = [
   "debugConnection",
   "suspendWhenHidden",
   "enableShortcuts",
+  "restoreLastPanelPath",
 ] as const;
 
 type StoredHomeAssistant = Pick<HomeAssistant, (typeof STORED_STATE)[number]>;

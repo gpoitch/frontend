@@ -87,6 +87,7 @@ export const connectionMixin = <T extends Constructor<HassBaseEl>>(
         debugConnection: __DEV__,
         suspendWhenHidden: true,
         enableShortcuts: true,
+        restoreLastPanelPath: false,
         moreInfoEntityId: null,
         hassUrl: (path = "") => new URL(path, auth.data.hassUrl).toString(),
         callService: async (

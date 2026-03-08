@@ -303,6 +303,7 @@ export const provideHass = (
     debugConnection: false,
     kioskMode: false,
     suspendWhenHidden: false,
+    restoreLastPanelPath: false,
     moreInfoEntityId: null as any,
     // @ts-ignore
     async callService(domain, service, data) {

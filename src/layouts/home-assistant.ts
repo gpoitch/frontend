@@ -104,6 +104,13 @@ export class HomeAssistantAppEl extends QuickBarMixin(HassElement) {
       storeState(this.hass!);
     });
 
+    this.addEventListener("hass-restore-last-panel-path", (ev) => {
+      this._updateHass({
+        restoreLastPanelPath: ev.detail.restoreLastPanelPath,
+      });
+      storeState(this.hass!);
+    });
+
     // Navigation
     const updateRoute = (path = curPath()) => {
       // Developer tools panel was moved to config in 2026.2

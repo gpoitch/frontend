@@ -254,6 +254,7 @@ export interface HomeAssistant {
   translationMetadata: TranslationMetadata;
   suspendWhenHidden: boolean;
   enableShortcuts: boolean;
+  restoreLastPanelPath: boolean;
   vibrate: boolean;
   debugConnection: boolean;
   kioskMode: boolean;

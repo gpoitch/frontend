@@ -18,6 +18,7 @@ import {
 import { classMap } from "lit/directives/class-map";
 import memoizeOne from "memoize-one";
 import { fireEvent } from "../common/dom/fire_event";
+import { navigate } from "../common/navigate";
 import { toggleAttribute } from "../common/dom/toggle_attribute";
 import { stringCompare } from "../common/string/compare";
 import { computeRTL } from "../common/util/compute_rtl";
@@ -185,6 +186,8 @@ class HaSidebar extends SubscribeMixin(ScrollableFadeMixin(LitElement)) {
 
   @state() private _hiddenPanels?: string[];
 
+  private _lastPanelPaths: Record<string, string> = {};
+
   private _mouseLeaveTimeout?: number;
 
   private _touchendTimeout?: number;
@@ -293,13 +296,15 @@ class HaSidebar extends SubscribeMixin(ScrollableFadeMixin(LitElement)) {
       hass.states !== oldHass.states ||
       hass.userData !== oldHass.userData ||
       hass.systemData !== oldHass.systemData ||
-      hass.connected !== oldHass.connected
+      hass.connected !== oldHass.connected ||
+      hass.restoreLastPanelPath !== oldHass.restoreLastPanelPath
     );
   }
 
   protected firstUpdated(changedProps: PropertyValues) {
     super.firstUpdated(changedProps);
     this._subscribePersistentNotifications();
+    this._loadLastPanelPaths();
   }
 
   private _subscribePersistentNotifications(): void {
@@ -318,6 +323,9 @@ class HaSidebar extends SubscribeMixin(ScrollableFadeMixin(LitElement)) {
     super.updated(changedProps);
     if (changedProps.has("alwaysExpand")) {
       toggleAttribute(this, "expanded", this.alwaysExpand);
+    }
+    if (changedProps.has("route")) {
+      this._storeCurrentPanelPath();
     }
     if (!changedProps.has("hass")) {
       return;
@@ -457,14 +465,17 @@ class HaSidebar extends SubscribeMixin(ScrollableFadeMixin(LitElement)) {
     const urlPath = panel.url_path;
     const icon = getPanelIcon(panel);
     const iconPath = getPanelIconPath(panel);
+    const href = this._getPanelHref(urlPath);
 
     return html`
       <ha-md-list-item
-        .href=${`/${urlPath}`}
+        .href=${href}
         type="link"
         class=${classMap({ selected: isSelected })}
         @mouseenter=${this._itemMouseEnter}
         @mouseleave=${this._itemMouseLeave}
+        @click=${this._panelClicked}
+        .urlPath=${urlPath}
       >
         ${iconPath
           ? html`<ha-svg-icon slot="start" .path=${iconPath}></ha-svg-icon>`
@@ -484,13 +495,16 @@ class HaSidebar extends SubscribeMixin(ScrollableFadeMixin(LitElement)) {
     }
     const isSelected =
       selectedPanel === "config" || this.route.path?.startsWith("/hassio/");
+    const href = this._getPanelHref("config");
     return html`
       <ha-md-list-item
         class="configuration ${classMap({ selected: isSelected })}"
         type="button"
-        href="/config"
+        .href=${href}
         @mouseenter=${this._itemMouseEnter}
         @mouseleave=${this._itemMouseLeave}
+        @click=${this._panelClicked}
+        .urlPath=${"config"}
       >
         <ha-svg-icon slot="start" .path=${mdiCog}></ha-svg-icon>
         ${this._updatesCount > 0 || this._issuesCount > 0
@@ -706,6 +720,68 @@ class HaSidebar extends SubscribeMixin(ScrollableFadeMixin(LitElement)) {
       return;
     }
     fireEvent(this, "hass-toggle-menu");
+  }
+
+  private _loadLastPanelPaths() {
+    try {
+      const stored = sessionStorage.getItem("sidebarLastPaths");
+      if (stored) {
+        this._lastPanelPaths = JSON.parse(stored);
+      }
+    } catch (_err) {
+      // Ignore storage errors
+    }
+  }
+
+  private _saveLastPanelPaths() {
+    try {
+      sessionStorage.setItem(
+        "sidebarLastPaths",
+        JSON.stringify(this._lastPanelPaths)
+      );
+    } catch (_err) {
+      // Ignore storage errors (private mode, full storage)
+    }
+  }
+
+  private _storeCurrentPanelPath() {
+    if (!this.route?.path) {
+      return;
+    }
+    const panelUrl = this.hass?.panelUrl;
+    if (!panelUrl) {
+      return;
+    }
+    const fullPath = this.route.path;
+    const subPath = fullPath.substring(panelUrl.length + 1);
+    if (subPath.length > 1) {
+      this._lastPanelPaths[panelUrl] = fullPath;
+      this._saveLastPanelPaths();
+    }
+  }
+
+  private _getPanelHref(urlPath: string): string {
+    if (this.hass?.restoreLastPanelPath && this._lastPanelPaths[urlPath]) {
+      return this._lastPanelPaths[urlPath];
+    }
+    return `/${urlPath}`;
+  }
+
+  private _panelClicked(ev: MouseEvent) {
+    if (!this.hass?.restoreLastPanelPath) {
+      return;
+    }
+    const target = ev.currentTarget as HTMLElement & { urlPath?: string };
+    const urlPath = target.urlPath;
+    if (!urlPath) {
+      return;
+    }
+    if (this.hass.panelUrl === urlPath && this._lastPanelPaths[urlPath]) {
+      ev.preventDefault();
+      delete this._lastPanelPaths[urlPath];
+      this._saveLastPanelPaths();
+      navigate(`/${urlPath}`);
+    }
   }
 
   static get styles() {

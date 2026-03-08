@@ -31,6 +31,7 @@ import "./ha-pick-theme-row";
 import "./ha-pick-time-format-row";
 import "./ha-pick-time-zone-row";
 import "./ha-push-notifications-row";
+import "./ha-restore-last-path-row";
 import "./ha-set-suspend-row";
 import "./ha-set-vibrate-row";
 import { isComponentLoaded } from "../../common/config/is_component_loaded";
@@ -246,6 +247,9 @@ class HaProfileSectionGeneral extends LitElement {
                   `
                 : ""}
               <ha-set-suspend-row .hass=${this.hass}></ha-set-suspend-row>
+              <ha-restore-last-path-row
+                .hass=${this.hass}
+              ></ha-restore-last-path-row>
               ${!isMobileClient
                 ? html`
                     <ha-enable-shortcuts-row

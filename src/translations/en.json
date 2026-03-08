@@ -9762,6 +9762,10 @@
           "header": "Suspend background connections",
           "description": "For hidden windows or background tabs, close the server connection after 5 minutes."
         },
+        "restore_last_path": {
+          "header": "Restore last visited path",
+          "description": "When navigating to a panel via the sidebar, restore the last visited page within that panel. Click the active sidebar item again to return to the default page."
+        },
         "push_notifications": {
           "header": "Receive notifications",
           "description": "Enable HTML5 browser notifications on this device.",
