@@ -17,6 +17,7 @@ import {
 } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
 import memoizeOne from "memoize-one";
+import { storage } from "../common/decorators/storage";
 import { fireEvent } from "../common/dom/fire_event";
 import { navigate } from "../common/navigate";
 import { toggleAttribute } from "../common/dom/toggle_attribute";
@@ -186,6 +187,12 @@ class HaSidebar extends SubscribeMixin(ScrollableFadeMixin(LitElement)) {
 
   @state() private _hiddenPanels?: string[];
 
+  @storage({
+    key: "sidebarLastPaths",
+    storage: "sessionStorage",
+    subscribe: false,
+    state: false,
+  })
   private _lastPanelPaths: Record<string, string> = {};
 
   private _mouseLeaveTimeout?: number;
@@ -304,7 +311,6 @@ class HaSidebar extends SubscribeMixin(ScrollableFadeMixin(LitElement)) {
   protected firstUpdated(changedProps: PropertyValues) {
     super.firstUpdated(changedProps);
     this._subscribePersistentNotifications();
-    this._loadLastPanelPaths();
   }
 
   private _subscribePersistentNotifications(): void {
@@ -722,28 +728,6 @@ class HaSidebar extends SubscribeMixin(ScrollableFadeMixin(LitElement)) {
     fireEvent(this, "hass-toggle-menu");
   }
 
-  private _loadLastPanelPaths() {
-    try {
-      const stored = sessionStorage.getItem("sidebarLastPaths");
-      if (stored) {
-        this._lastPanelPaths = JSON.parse(stored);
-      }
-    } catch (_err) {
-      // Ignore storage errors
-    }
-  }
-
-  private _saveLastPanelPaths() {
-    try {
-      sessionStorage.setItem(
-        "sidebarLastPaths",
-        JSON.stringify(this._lastPanelPaths)
-      );
-    } catch (_err) {
-      // Ignore storage errors (private mode, full storage)
-    }
-  }
-
   private _storeCurrentPanelPath() {
     if (!this.route?.path) {
       return;
@@ -755,8 +739,7 @@ class HaSidebar extends SubscribeMixin(ScrollableFadeMixin(LitElement)) {
     const fullPath = this.route.path;
     const subPath = fullPath.substring(panelUrl.length + 1);
     if (subPath.length > 1) {
-      this._lastPanelPaths[panelUrl] = fullPath;
-      this._saveLastPanelPaths();
+      this._lastPanelPaths = { ...this._lastPanelPaths, [panelUrl]: fullPath };
     }
   }
 
@@ -778,8 +761,8 @@ class HaSidebar extends SubscribeMixin(ScrollableFadeMixin(LitElement)) {
     }
     if (this.hass.panelUrl === urlPath && this._lastPanelPaths[urlPath]) {
       ev.preventDefault();
-      delete this._lastPanelPaths[urlPath];
-      this._saveLastPanelPaths();
+      const { [urlPath]: _, ...rest } = this._lastPanelPaths;
+      this._lastPanelPaths = rest;
       navigate(`/${urlPath}`);
     }
   }
